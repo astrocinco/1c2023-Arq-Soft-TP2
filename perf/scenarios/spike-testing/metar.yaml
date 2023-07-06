@@ -1,0 +1,63 @@
+config:
+  payload:
+    path: "../payloads/stations.csv"
+    fields:
+      - "station"
+  plugins:
+    publish-metrics:
+      - type: datadog
+        apiKey: "{{ $processEnvironment.DATADOG_API_KEY }}"
+        apiHost: "us5.datadoghq.com"
+        prefix: "artillery."
+        tags:
+          - "test:spike-testing"
+          - "api:metar"
+          - "env:{{ $environment }}"
+
+  environments:
+    base-case:
+      target: "{{ $processEnvironment.TARGET }}/metar"
+      variables:
+        cache: "false"
+    cache:
+      target: "{{ $processEnvironment.TARGET }}/metar"
+      variables:
+        cache: "true"
+    rate-limiting:
+      target: "{{ $processEnvironment.TARGET }}/limited/metar"
+      variables:
+        cache: "false"
+
+  pool: 50 # All HTTP requests from all virtual users will be sent over the same connections
+
+  # TODO: Configurar para que tenga una falla y luego que funcione bien
+  phases:
+    - name: normal period
+      duration: 30
+      arrivalRate: 20
+    - name: spike period
+      duration: 30
+      arrivalRate: 500
+    - name: normal period
+      duration: 30
+      arrivalRate: 20
+    - name: spike period
+      duration: 30
+      arrivalRate: 500
+    - name: normal period
+      duration: 30
+      arrivalRate: 20
+    - name: spike period
+      duration: 30
+      arrivalRate: 500
+
+scenarios:
+  - name: METAR - Root (/)
+    flow:
+      - get:
+          url: "/"
+          qs:
+            cache: "{{ cache }}"
+            station: "{{ station }}"
+          headers:
+            X-Handle-Guid-Errors: "{{ $processEnvironment.HANDLE_GUID_ERRORS }}"

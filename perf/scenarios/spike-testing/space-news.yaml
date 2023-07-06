@@ -1,0 +1,50 @@
+config:
+  plugins:
+    publish-metrics:
+      - type: datadog
+        apiKey: "{{ $processEnvironment.DATADOG_API_KEY }}"
+        apiHost: "us5.datadoghq.com"
+        prefix: "artillery."
+        tags:
+          - "test:spike-testing"
+          - "api:space-news"
+          - "env:{{ $environment }}"
+
+  environments:
+    base-case:
+      target: "{{ $processEnvironment.TARGET }}/space_news"
+    cache:
+      target: "{{ $processEnvironment.TARGET }}/space_news?cache=true"
+    rate-limiting:
+      target: "{{ $processEnvironment.TARGET }}/limited/space_news"
+
+  pool: 50 # All HTTP requests from all virtual users will be sent over the same connections
+
+  # TODO: Configurar para que tenga una falla y luego que funcione bien
+  phases:
+    - name: normal period
+      duration: 30
+      arrivalRate: 20
+    - name: spike period
+      duration: 30
+      arrivalRate: 500
+    - name: normal period
+      duration: 30
+      arrivalRate: 20
+    - name: spike period
+      duration: 30
+      arrivalRate: 500
+    - name: normal period
+      duration: 30
+      arrivalRate: 20
+    - name: spike period
+      duration: 30
+      arrivalRate: 500
+
+scenarios:
+  - name: Space news - Root (/)
+    flow:
+      - get:
+          url: "/"
+          headers:
+            X-Handle-Guid-Errors: "{{ $processEnvironment.HANDLE_GUID_ERRORS }}"
